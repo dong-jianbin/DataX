@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -185,11 +186,46 @@ public class FtpWriter extends Writer {
                 LOG.error(message, e);
             }
         }
-
+        /**
+         *
+         * @param mandatoryNumber
+         *  ftpwriter 输出的文件名按照配置名输出，不添加uuid
+         * @author dongjb
+         * @date 20200709
+         *
+         * @return
+         */
         @Override
         public List<Configuration> split(int mandatoryNumber) {
-            return UnstructuredStorageWriterUtil.split(this.writerSliceConfig,
-                    this.allFileExists, mandatoryNumber);
+//            return UnstructuredStorageWriterUtil.split(this.writerSliceConfig,
+//                    this.allFileExists, mandatoryNumber);
+            LOG.info("begin do split...");
+            Set<String> allFileExists = new HashSet<String>();
+            allFileExists.addAll(this.allFileExists);
+            List<Configuration> writerSplitConfigs = new ArrayList<Configuration>();
+            String filePrefix = writerSliceConfig.getString(com.alibaba.datax.plugin.unstructuredstorage.writer.Key.FILE_NAME);
+
+            String fileSuffix;
+            for (int i = 0; i < mandatoryNumber; i++) {
+                // handle same file name
+                Configuration splitedTaskConfig = writerSliceConfig.clone();
+                String fullFileName = null;
+//                fileSuffix = UUID.randomUUID().toString().replace('-', '_');
+//                fullFileName = String.format("%s__%s", filePrefix, fileSuffix);
+                fullFileName = filePrefix;
+                while (allFileExists.contains(fullFileName)) {
+//                    fileSuffix = UUID.randomUUID().toString().replace('-', '_');
+//                    fullFileName = String.format("%s__%s", filePrefix, fileSuffix);
+                    fullFileName = filePrefix;
+                }
+                allFileExists.add(fullFileName);
+                splitedTaskConfig.set(com.alibaba.datax.plugin.unstructuredstorage.writer.Key.FILE_NAME, fullFileName);
+                LOG.info(String
+                        .format("splited write file name:[%s]", fullFileName));
+                writerSplitConfigs.add(splitedTaskConfig);
+            }
+            LOG.info("end do split.");
+            return writerSplitConfigs;
         }
 
     }
